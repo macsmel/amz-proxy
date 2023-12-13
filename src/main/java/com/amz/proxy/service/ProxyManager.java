@@ -26,7 +26,7 @@ public class ProxyManager {
     private Resource resource;
 
     @Value("${sockets.delay}")
-    private String delay;
+    private int delay;
 
     @PostConstruct
     public void init() {
@@ -75,19 +75,8 @@ public class ProxyManager {
         ProxyServer proxyServer = findProxyByHost(host);
         if (proxyServer != null) {
             log.info("Proxy {} marked as unvailable", proxyServer.getHost());
-            proxyServer.setUnavailableUntil(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(Long.parseLong(delay)));
-//            proxyServer.setUnavailableUntil(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(Long.parseLong(delay)));
-        }
-    }
-
-    @Scheduled(fixedRate = 60000)
-    public void checkUnavailableProxies() {
-        long currentTime = System.currentTimeMillis();
-        for (ProxyServer proxyServer : proxyConfigurations) {
-            Long unavailableUntil = proxyServer.getUnavailableUntil();
-            if (unavailableUntil != null && unavailableUntil <= currentTime) {
-                proxyServer.setUnavailableUntil(null);
-            }
+            proxyServer.setUnavailableUntil(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(delay));
+//            proxyServer.setUnavailableUntil(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(delay));
         }
     }
 }
