@@ -22,7 +22,6 @@ public class ProxyController {
     @GetMapping
     public ResponseEntity<?> handleGetRequest(@RequestParam String url) throws ExecutionException, InterruptedException {
         CompletableFuture<ResponseEntity<?>> futureResponse = asyncService.makeGetRequestAsync(url);
-        log.info("Current thread: {}", Thread.currentThread().getName());
         return futureResponse.get();
     }
 
@@ -32,7 +31,6 @@ public class ProxyController {
             @RequestParam(required = false, defaultValue = "application/x-www-form-urlencoded") String encoding,
             @RequestBody String data) throws ExecutionException, InterruptedException {
         CompletableFuture<ResponseEntity<?>> futureResponse = asyncService.makePostRequestAsync(url, data, encoding);
-        log.info("Current thread: {}", Thread.currentThread().getName());
         return futureResponse.get();
     }
 }
