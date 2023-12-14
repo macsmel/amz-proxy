@@ -4,7 +4,6 @@ import com.amz.proxy.model.ProxyServer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -12,15 +11,16 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 public class ProxyManager {
-
-    private final List<ProxyServer> proxyConfigurations = new ArrayList<>();
+    private final Map<String, ProxyServer> proxyConfigurations = new ConcurrentHashMap<>();
+    private final Random random = new Random();
 
     @Value("${sockets.file.path}")
     private Resource resource;
@@ -51,24 +51,32 @@ public class ProxyManager {
                     configuration.setPort(Integer.parseInt(parts[1]));
                     configuration.setUsername(parts[2]);
                     configuration.setPassword(parts[3].toCharArray());
-                    proxyConfigurations.add(configuration);
+                    proxyConfigurations.put(configuration.getHost(), configuration);
                 }
             }
         }
     }
 
     public ProxyServer getFirstAvailableProxy() {
-        return proxyConfigurations.stream()
-                .filter(proxy -> proxy.getUnavailableUntil() == null || proxy.getUnavailableUntil() <= System.currentTimeMillis())
-                .findFirst()
-                .orElse(null);
+        long currentTime = System.currentTimeMillis();
+        ProxyServer[] proxies = proxyConfigurations.values().toArray(new ProxyServer[0]);
+
+        for (int i = 0; i < proxies.length; i++) {
+            int randomIndex = i + random.nextInt(proxies.length - i);
+            ProxyServer temp = proxies[randomIndex];
+            proxies[randomIndex] = proxies[i];
+            proxies[i] = temp;
+
+            Long unavailableUntil = proxies[i].getUnavailableUntil();
+            if (unavailableUntil == null || unavailableUntil <= currentTime) {
+                return proxies[i];
+            }
+        }
+        return null;
     }
 
     private ProxyServer findProxyByHost(String host) {
-        return proxyConfigurations.stream()
-                .filter(proxy -> proxy.getHost().equals(host))
-                .findFirst()
-                .orElse(null);
+        return proxyConfigurations.get(host);
     }
 
     public void markHostAsUnavailableForOneHour(String host) {
@@ -79,4 +87,5 @@ public class ProxyManager {
 //            proxyServer.setUnavailableUntil(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(delay));
         }
     }
+
 }
